@@ -39,38 +39,56 @@ except Exception as e:
 # Espera para garantir que a página de Jaquetas carregue
 time.sleep(5)
 
+
 # Lista para armazenar dados de produtos
 produtos_lista = []
 
-# Encontra todos os elementos de marcas (com a classe 'ltr-10idii7-Body-BodyBold')
-marcas = nav.find_elements(By.CLASS_NAME, 'ltr-10idii7-Body-BodyBold')
-# Para cada marca, extrai os produtos e outras informações
-marcas = nav.find_elements(By.CLASS_NAME, 'ltr-10idii7-Body-BodyBold')
-# Para cada marca, extrai os produtos e outras informações
-for marca in marcas:
+# Encontra todos os elementos de marcas
+produtos = nav.find_elements(By.XPATH, '//p[@data-component="ProductCardDescription"]')
+
+for produto in produtos:
     try:
-        # Captura a marca
-        marca_nome = marca.text
-        print(marca_nome)
+        # Captura o nome da marca atual
+        produtos = produto.text
+        print(f"Produto: {produtos}")
         
-        # Encontra os elementos de nome do produto com o atributo 'data-component="ProductCardDescription"'
-        produtos = nav.find_elements(By.XPATH, '//p[@data-component="ProductCardDescription"]')
+        # Rola até a marca para garantir que esteja visível
+        nav.execute_script("arguments[0].scrollIntoView();", produto)
+        time.sleep(1)  # Pequena pausa para garantir que a rolagem tenha sido concluída
+
+        # Move-se para o elemento da marca atual para garantir que está visível
+        ActionChains(nav).move_to_element(produto).perform()
         
-        # Encontra os elementos de preço com o atributo 'data-component="PriceFinal"'
+        # Encontra os produtos específicos dessa marca visível
+        marcas = nav.find_elements(By.XPATH, '//p[@data-component="ProductCardBrandName"]')
         precos = nav.find_elements(By.XPATH, '//p[@data-component="PriceFinal"]')
+        marcas = nav.find_elements(By.XPATH, '//p[@data-component="ProductCardBrandName"]')
+        precos_og = nav.find_elements(By.XPATH, '//p[@data-component="PriceOriginal"]')
+        precos_disc = nav.find_elements(By.XPATH, '//p[@data-component="PriceDiscount"]')
+
         
-        nome_produto = produtos.text  # Extrai o texto do nome do produto
-        preco = precos.text  # Extrai o texto do preço
-        print(f"Produto: {nome_produto}, Preço: {preco}")
-            
+        # Filtra produtos e preços apenas dessa marca
+        for marcas, precos, precos_og, precos_disc in zip(marcas, precos, precos_og, precos_disc):
+            marcas = marcas.text  # Extrai o texto do nome do produto
+            precos = precos.text  # Extrai o texto do preço
+            precos_og = precos_og.text  # Extrai o texto do nome do produto
+            precos_disc = precos_disc.text  # Extrai o texto do preço
+            produtos_lista.append({
+                    "Produto": produtos,
+                    "Marca": marcas,
+                    "Preço": precos,
+                    "Preço Original": precos_og,
+                    "Desconto": precos_disc
+                })
+                
     except Exception as e:
-        print(f"Erro ao processar o produto: {e}")
+        print(f"Erro ao processar o produto para a marca {produto}: {e}")
 
 # Converte a lista de dicionários para um DataFrame
 df_produtos = pd.DataFrame(produtos_lista)
-print(produtos_lista)
-# Exibe o DataFrame
-print(df_produtos)
+df_produtos
+df_produtos.to_csv("produtos.csv", index=False, encoding='utf-8')
+print("Dados salvos em produtos.csv com sucesso.")
 
 # Fecha o navegador
 nav.quit()
